@@ -19,7 +19,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy the application code
 COPY . /app/
+COPY . /
 ADD . /app/
-
+ADD . /
+ADD . .
 # Run the application
 CMD ["python", "app.py"]
