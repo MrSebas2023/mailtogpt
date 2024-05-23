@@ -1,4 +1,5 @@
 # app.py
+import os
 import imaplib
 import email
 from email.header import decode_header
@@ -8,11 +9,17 @@ from selenium.webdriver.chrome.options import Options
 import smtplib
 from email.mime.text import MIMEText
 
+# Fetch environment variables
+IMAP_SERVER = os.getenv('IMAP_SERVER')
+SMTP_SERVER = os.getenv('SMTP_SERVER')
+EMAIL = os.getenv('EMAIL')
+PASSWORD = os.getenv('PASSWORD')
+
 # Email fetching function
 def fetch_email():
     # Connect to the server
-    mail = imaplib.IMAP4_SSL("imap.your-email-provider.com")
-    mail.login("your-email@example.com", "your-password")
+    mail = imaplib.IMAP4_SSL(IMAP_SERVER)
+    mail.login(EMAIL, PASSWORD)
 
     # Select the mailbox you want to check
     mail.select("inbox")
@@ -90,13 +97,13 @@ def send_email(subject, from_, body):
     # Create a text/plain message
     msg = MIMEText(body)
     msg["Subject"] = "Corrected: " + subject
-    msg["From"] = "your-email@example.com"
+    msg["From"] = EMAIL
     msg["To"] = from_
 
     # Send the message via your SMTP server
-    server = smtplib.SMTP_SSL("smtp.your-email-provider.com", 465)
-    server.login("your-email@example.com", "your-password")
-    server.sendmail("your-email@example.com", [from_], msg.as_string())
+    server = smtplib.SMTP_SSL(SMTP_SERVER, 465)
+    server.login(EMAIL, PASSWORD)
+    server.sendmail(EMAIL, [from_], msg.as_string())
     server.quit()
 
 if __name__ == "__main__":
