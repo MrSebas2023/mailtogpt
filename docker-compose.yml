@@ -1,0 +1,21 @@
+version: '3.8'
+
+services:
+  email-processor:
+    image: your-dockerhub-username/email-processor:latest
+    build:
+      context: .
+    container_name: email_processor
+    volumes:
+      - .:/app
+    environment:
+      - IMAP_SERVER=imap.your-email-provider.com
+      - SMTP_SERVER=smtp.your-email-provider.com
+      - EMAIL=your-email@example.com
+      - PASSWORD=your-password
+    networks:
+      - email_network
+
+networks:
+  email_network:
+    driver: bridge
