@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currently Playing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .track-info {
+            margin: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="track-info">
+        <h2>Currently Playing</h2>
+        <p id="track-name"></p>
+        <p id="track-artist"></p>
+        <p id="track-album"></p>
+        <p id="track-bpm"></p>
+        <p id="track-key"></p>
+        <p id="track-mode"></p>
+    </div>
+
+    <script>
+        async function fetchCurrentlyPlaying() {
+            const response = await fetch('/currently-playing');
+            const data = await response.json();
+            if (data.error) {
+                document.getElementById('track-name').innerText = data.error;
+            } else {
+                document.getElementById('track-name').innerText = 'Name: ' + data.name;
+                document.getElementById('track-artist').innerText = 'Artist: ' + data.artist;
+                document.getElementById('track-album').innerText = 'Album: ' + data.album;
+                document.getElementById('track-bpm').innerText = 'BPM: ' + data.bpm;
+                document.getElementById('track-key').innerText = 'Key: ' + data.key;
+                document.getElementById('track-mode').innerText = 'Mode: ' + data.mode;
+            }
+        }
+
+        fetchCurrentlyPlaying();
+        setInterval(fetchCurrentlyPlaying, 5000); // Update every 5 seconds
+    </script>
+</body>
+
+</html>
