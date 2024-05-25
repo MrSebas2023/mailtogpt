@@ -7,7 +7,7 @@ services:
     working_dir: /app
     volumes:
       - ./app:/app
-    command: [ "python", "/app/app.py" ]
+    command: /bin/bash -c "pip install --no-cache-dir -r /app/requirements.txt && python /app/app.py"
     ports:
       - "5001:5000" # Changed port
 
