@@ -9,6 +9,10 @@
 </head>
 
 <body>
+    <div class="history-container">
+        <h3>Previously Played</h3>
+        <div id="history"></div>
+    </div>
     <div class="container">
         <h2>Currently Playing</h2>
         <img id="album-image" src="" alt="Album cover" class="hidden">
@@ -27,6 +31,8 @@
     <div id="notification" class="notification"></div>
 
     <script>
+        let history = [];
+
         async function fetchCurrentlyPlaying() {
             const response = await fetch('/currently-playing');
             const data = await response.json();
@@ -57,13 +63,29 @@
                 data.genre.forEach(genre => {
                     const button = document.createElement('button');
                     button.innerText = `Add to ${genre} playlist`;
-                    button.onclick = () => addToPlaylist(genre, data.id);
+                    button.onclick = () => addToPlaylist(genre, data.id, button);
                     genreButtons.appendChild(button);
                 });
+
+                addToHistory(data);
             }
         }
 
-        async function addToPlaylist(genre, trackId) {
+        function addToHistory(track) {
+            if (history.find(t => t.id === track.id)) return;
+            history.push(track);
+            const historyDiv = document.getElementById('history');
+            const trackDiv = document.createElement('div');
+            trackDiv.className = 'history-track';
+            trackDiv.innerHTML = `
+                <img src="${track.album_image_url}" alt="Album cover">
+                <p>Name: ${track.name}</p>
+                <p>Artist: ${track.artist}</p>
+            `;
+            historyDiv.appendChild(trackDiv);
+        }
+
+        async function addToPlaylist(genre, trackId, button) {
             const response = await fetch(`/add_to_playlist/${genre}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -71,6 +93,7 @@
             });
             const data = await response.json();
             if (data.success) {
+                button.classList.add('added');
                 showNotification(`Track added to ${genre} playlist`);
             } else {
                 showNotification('Failed to add track to playlist');
