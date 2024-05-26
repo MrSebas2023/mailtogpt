@@ -135,7 +135,12 @@ def play_track(track_id):
         return jsonify({'error': 'User not authenticated'}), 401
 
     sp = spotipy.Spotify(auth=token_info['access_token'])
-    sp.start_playback(uris=[f'spotify:track:{track_id}'])
+    
+    # Add track to the queue
+    sp.add_to_queue(uri=f'spotify:track:{track_id}')
+    
+    # Skip to the next track to start playing the queued track
+    sp.next_track()
     
     return jsonify({'success': True, 'message': 'Track is now playing'})
 
