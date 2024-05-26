@@ -19,86 +19,66 @@ SPOTIPY_CLIENT_SECRET = os.getenv('SPOTIPY_CLIENT_SECRET', 'your_client_secret')
 SPOTIPY_REDIRECT_URI = os.getenv('SPOTIPY_REDIRECT_URI', 'your_redirect_uri')
 
 # Ensure the scope includes all necessary permissions
-scope = "user-library-read playlist-modify-public playlist-modify-private user-read-playback-state"
+scope = "user-library-read playlist-modify-public playlist-modify-private user-read-playback-state user-read-currently-playing"
 
 sp_oauth = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=scope)
 
-def create_or_get_playlist(sp, playlist_name):
-    playlists = sp.current_user_playlists()
-    for playlist in playlists['items']:
-        if playlist['name'] == playlist_name:
-            return playlist['id']
-    
-    new_playlist = sp.user_playlist_create(user=sp.current_user()['id'], name=playlist_name)
-    return new_playlist['id']
+# In-memory storage for history
+history = []
 
 def get_token():
     token_info = session.get('token_info', None)
     if not token_info:
         return None
-    
+
     now = int(time.time())
     is_expired = token_info['expires_at'] - now < 60
+
     if is_expired:
         token_info = sp_oauth.refresh_access_token(token_info['refresh_token'])
         session['token_info'] = token_info
-    return token_info
 
-# def check_lexicon_api():
-#     lexicon_url = "http://192.168.2.16:48624/v1/tracks"
-#     try:
-#         response = requests.get(lexicon_url, timeout=5)
-#         response.raise_for_status()
-#         return True
-#     except requests.RequestException:
-#         return False
+    return token_info
 
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
-
-# @app.route('/lexicon-status')
-# def lexicon_status():
-#     status = check_lexicon_api()
-#     return jsonify({'lexicon_status': status})
 
 @app.route('/currently-playing', methods=['GET'])
 def currently_playing():
     token_info = get_token()
     if not token_info:
         return jsonify({'error': 'User not authenticated'}), 401
-    
+
     sp = spotipy.Spotify(auth=token_info['access_token'])
     current_track = sp.current_playback()
+    
     if current_track and current_track['is_playing']:
         track = current_track['item']
-        track_id = track['id']
-        
-        # Fetch audio features
-        audio_features = sp.audio_features([track_id])[0]
-        bpm = round(audio_features['tempo'])  # Round the BPM to the nearest integer
-        key = audio_features['key']
-        mode = 'Major' if audio_features['mode'] == 1 else 'Minor'
-        
-        # Fetch artist's genres
-        artist_id = track['artists'][0]['id']
-        artist_info = sp.artist(artist_id)
-        genres = artist_info['genres']
-        
+        audio_features = sp.audio_features([track['id']])[0]
         track_info = {
             'name': track['name'],
             'artist': ', '.join([artist['name'] for artist in track['artists']]),
             'album': track['album']['name'],
             'album_image_url': track['album']['images'][0]['url'],
-            'id': track_id,
-            'genre': genres,
-            'bpm': bpm,
-            'key': key,
-            'mode': mode
+            'id': track['id'],
+            'bpm': audio_features['tempo'],
+            'key': audio_features['key'],
+            'mode': 'Major' if audio_features['mode'] == 1 else 'Minor',
+            'genre': 'example genre'  # Placeholder for genre information
         }
+
+        # Add to history if not already present
+        if not any(t['id'] == track_info['id'] for t in history):
+            history.append(track_info)
+
         return jsonify(track_info)
     else:
         return jsonify({'error': 'No track currently playing'})
+
+@app.route('/history', methods=['GET'])
+def get_history():
+    return jsonify(history)
 
 @app.route('/login')
 def login():
@@ -112,28 +92,6 @@ def callback():
     token_info = sp_oauth.get_access_token(code)
     session['token_info'] = token_info
     return redirect(url_for('index'))
-
-@app.route('/add_to_playlist/<genre>', methods=['POST'])
-def add_to_playlist(genre):
-    token_info = get_token()
-    if not token_info:
-        return jsonify({'error': 'User not authenticated'}), 401
-    
-    sp = spotipy.Spotify(auth=token_info['access_token'])
-    track_id = request.json['track_id']
-    
-    playlist_name = genre
-    
-    playlist_id = create_or_get_playlist(sp, playlist_name)
-    sp.playlist_add_items(playlist_id, [track_id])
-    
-    return jsonify({'success': True, 'message': f'Track added to {playlist_name}'})
-
-# @app.route('/recheck-lexicon-status', methods=['POST'])
-# def recheck_lexicon_status():
-#     status = check_lexicon_api()
-#     return jsonify({'lexicon_status': status})
-
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
