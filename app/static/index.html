@@ -66,9 +66,10 @@
                     button.onclick = () => addToPlaylist(genre, data.id, button);
                     genreButtons.appendChild(button);
                 });
-
-                addToHistory(data);
             }
+
+            // Fetch history
+            fetchHistory();
         }
 
         function addToHistory(track) {
@@ -98,6 +99,23 @@
             } else {
                 showNotification('Failed to add track to playlist');
             }
+        }
+
+        async function fetchHistory() {
+            const response = await fetch('/history');
+            const historyData = await response.json();
+            const historyDiv = document.getElementById('history');
+            historyDiv.innerHTML = ''; // Clear the current history
+            historyData.forEach(track => {
+                const trackDiv = document.createElement('div');
+                trackDiv.className = 'history-track';
+                trackDiv.innerHTML = `
+                    <img src="${track.album_image_url}" alt="Album cover">
+                    <p>Name: ${track.name}</p>
+                    <p>Artist: ${track.artist}</p>
+                `;
+                historyDiv.appendChild(trackDiv);
+            });
         }
 
         function showNotification(message) {
