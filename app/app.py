@@ -72,16 +72,29 @@ def currently_playing():
     current_track = sp.current_playback()
     if current_track and current_track['is_playing']:
         track = current_track['item']
+        track_id = track['id']
+        
+        # Fetch audio features
+        audio_features = sp.audio_features([track_id])[0]
+        bpm = round(audio_features['tempo'])  # Round the BPM to the nearest integer
+        key = audio_features['key']
+        mode = 'Major' if audio_features['mode'] == 1 else 'Minor'
+        
+        # Fetch artist's genres
+        artist_id = track['artists'][0]['id']
+        artist_info = sp.artist(artist_id)
+        genres = artist_info['genres']
+        
         track_info = {
             'name': track['name'],
             'artist': ', '.join([artist['name'] for artist in track['artists']]),
             'album': track['album']['name'],
             'album_image_url': track['album']['images'][0]['url'],
-            'id': track['id'],
-            'genre': ['example genre'],  # Placeholder for genre information
-            'bpm': 120,  # Placeholder for BPM information
-            'key': 'C',  # Placeholder for key information
-            'mode': 'Major'  # Placeholder for mode information
+            'id': track_id,
+            'genre': genres,
+            'bpm': bpm,
+            'key': key,
+            'mode': mode
         }
         return jsonify(track_info)
     else:
@@ -115,6 +128,12 @@ def add_to_playlist(genre):
     sp.playlist_add_items(playlist_id, [track_id])
     
     return jsonify({'success': True, 'message': f'Track added to {playlist_name}'})
+
+# @app.route('/recheck-lexicon-status', methods=['POST'])
+# def recheck_lexicon_status():
+#     status = check_lexicon_api()
+#     return jsonify({'lexicon_status': status})
+
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
