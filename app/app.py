@@ -3,7 +3,6 @@ from flask_session import Session
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 import os
-import requests
 import logging
 import time
 
@@ -19,7 +18,7 @@ SPOTIPY_CLIENT_SECRET = os.getenv('SPOTIPY_CLIENT_SECRET', 'your_client_secret')
 SPOTIPY_REDIRECT_URI = os.getenv('SPOTIPY_REDIRECT_URI', 'your_redirect_uri')
 
 # Ensure the scope includes all necessary permissions
-scope = "user-library-read playlist-modify-public playlist-modify-private user-read-playback-state"
+scope = "user-library-read playlist-modify-public playlist-modify-private user-read-playback-state user-modify-playback-state"
 
 sp_oauth = SpotifyOAuth(client_id=SPOTIPY_CLIENT_ID, client_secret=SPOTIPY_CLIENT_SECRET, redirect_uri=SPOTIPY_REDIRECT_URI, scope=scope)
 
@@ -53,7 +52,7 @@ def index():
 
 @app.route('/history')
 def history():
-    return jsonify(track_history)
+    return jsonify(track_history[:5])  # Return only the last 5 tracks
 
 @app.route('/currently-playing', methods=['GET'])
 def currently_playing():
@@ -90,9 +89,11 @@ def currently_playing():
             'mode': mode
         }
 
-        # Add to history
+        # Add to history at the beginning
         if not any(t['id'] == track_info['id'] for t in track_history):
-            track_history.append(track_info)
+            track_history.insert(0, track_info)
+            if len(track_history) > 5:
+                track_history.pop()  # Keep only the last 5 tracks
         
         return jsonify(track_info)
     else:
@@ -126,6 +127,17 @@ def add_to_playlist(genre):
     sp.playlist_add_items(playlist_id, [track_id])
     
     return jsonify({'success': True, 'message': f'Track added to {playlist_name}'})
+
+@app.route('/play_track/<track_id>', methods=['POST'])
+def play_track(track_id):
+    token_info = get_token()
+    if not token_info:
+        return jsonify({'error': 'User not authenticated'}), 401
+
+    sp = spotipy.Spotify(auth=token_info['access_token'])
+    sp.start_playback(uris=[f'spotify:track:{track_id}'])
+    
+    return jsonify({'success': True, 'message': 'Track is now playing'})
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)

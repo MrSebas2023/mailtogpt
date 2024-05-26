@@ -73,16 +73,42 @@
 
         function addToHistory(track) {
             if (history.find(t => t.id === track.id)) return;
-            history.push(track);
+            history.unshift(track);  // Add to the beginning of the history
+            if (history.length > 5) {
+                history.pop();  // Keep only the last 5 tracks
+            }
+            renderHistory();
+        }
+
+        function renderHistory() {
             const historyDiv = document.getElementById('history');
-            const trackDiv = document.createElement('div');
-            trackDiv.className = 'history-track';
-            trackDiv.innerHTML = `
-                <img src="${track.album_image_url}" alt="Album cover">
-                <p>Name: ${track.name}</p>
-                <p>Artist: ${track.artist}</p>
-            `;
-            historyDiv.appendChild(trackDiv);
+            historyDiv.innerHTML = ''; // Clear the current history
+            history.forEach(track => {
+                const trackDiv = document.createElement('div');
+                trackDiv.className = 'history-track';
+                trackDiv.innerHTML = `
+                    <img src="${track.album_image_url}" alt="Album cover">
+                    <p>Name: ${track.name}</p>
+                    <p>Artist: ${track.artist}</p>
+                    <div class="history-buttons">
+                        <button onclick="playTrack('${track.id}')">Play</button>
+                        ${track.genre.map(genre => `<button onclick="addToPlaylist('${genre}', '${track.id}', this)">Add to ${genre} playlist</button>`).join('')}
+                    </div>
+                `;
+                historyDiv.appendChild(trackDiv);
+            });
+        }
+
+        async function playTrack(trackId) {
+            const response = await fetch(`/play_track/${trackId}`, {
+                method: 'POST'
+            });
+            const data = await response.json();
+            if (data.success) {
+                showNotification('Track is now playing');
+            } else {
+                showNotification('Failed to play track');
+            }
         }
 
         async function addToPlaylist(genre, trackId, button) {
@@ -103,18 +129,8 @@
         async function fetchHistory() {
             const response = await fetch('/history');
             const historyData = await response.json();
-            const historyDiv = document.getElementById('history');
-            historyDiv.innerHTML = ''; // Clear the current history
-            historyData.forEach(track => {
-                const trackDiv = document.createElement('div');
-                trackDiv.className = 'history-track';
-                trackDiv.innerHTML = `
-                    <img src="${track.album_image_url}" alt="Album cover">
-                    <p>Name: ${track.name}</p>
-                    <p>Artist: ${track.artist}</p>
-                `;
-                historyDiv.appendChild(trackDiv);
-            });
+            history = historyData;  // Update the local history
+            renderHistory();
         }
 
         function showNotification(message) {
