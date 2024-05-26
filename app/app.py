@@ -5,7 +5,6 @@ from spotipy.oauth2 import SpotifyOAuth
 import os
 import logging
 import time
-import requests
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -99,19 +98,6 @@ def currently_playing():
         return jsonify(track_info)
     else:
         return jsonify({'error': 'No track currently playing'})
-    
-@app.route('/play_track/<track_id>', methods=['POST'])
-def play_track(track_id):
-    token_info = get_token()
-    if not token_info:
-        return jsonify({'error': 'User not authenticated'}), 401
-
-    sp = spotipy.Spotify(auth=token_info['access_token'])
-    try:
-        sp.start_playback(uris=[f'spotify:track:{track_id}'])
-        return jsonify({'success': True, 'message': 'Track is now playing'})
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/login')
 def login():
@@ -142,16 +128,19 @@ def add_to_playlist(genre):
     
     return jsonify({'success': True, 'message': f'Track added to {playlist_name}'})
 
-@app.route('/play_track/<track_id>', methods=['POST'])
+@app.route('/play_track/<track_id>', methods=['POST'])  # Ensure there is only one definition of this function
 def play_track(track_id):
     token_info = get_token()
     if not token_info:
         return jsonify({'error': 'User not authenticated'}), 401
 
     sp = spotipy.Spotify(auth=token_info['access_token'])
-    sp.start_playback(uris=[f'spotify:track:{track_id}'])
-    
-    return jsonify({'success': True, 'message': 'Track is now playing'})
+    try:
+        sp.start_playback(uris=[f'spotify:track:{track_id}'])
+        return jsonify({'success': True, 'message': 'Track is now playing'})
+    except Exception as e:
+        app.logger.error(f"Error playing track {track_id}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.DEBUG)
