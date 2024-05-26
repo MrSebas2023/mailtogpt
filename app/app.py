@@ -1,10 +1,12 @@
-from flask import Flask, jsonify, send_from_directory
+from flask import Flask, jsonify, redirect, request, session, url_for, send_from_directory
 from spotipy import Spotify
 from spotipy.oauth2 import SpotifyOAuth
 import os
 import logging
 
 app = Flask(__name__, static_folder='static')
+app.secret_key = os.urandom(24)
+app.config['SESSION_COOKIE_NAME'] = 'spotify-login-session'
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -12,7 +14,7 @@ sp_oauth = SpotifyOAuth(
     client_id=os.getenv("SPOTIPY_CLIENT_ID"),
     client_secret=os.getenv("SPOTIPY_CLIENT_SECRET"),
     redirect_uri=os.getenv("SPOTIPY_REDIRECT_URI"),
-    scope="user-read-currently-playing"
+    scope="user-read-currently-playing playlist-modify-public playlist-modify-private"
 )
 
 @app.route('/')
@@ -30,7 +32,7 @@ def callback():
     code = request.args.get('code')
     token_info = sp_oauth.get_access_token(code)
     session["token_info"] = token_info
-    return redirect(url_for('currently_playing'))
+    return redirect(url_for('home'))
 
 @app.route('/currently-playing', methods=['GET'])
 def currently_playing():
@@ -45,21 +47,53 @@ def currently_playing():
             return jsonify({'error': 'No track currently playing'})
 
         track_id = current_track['item']['id']
+        artist_id = current_track['item']['artists'][0]['id']
+        artist_info = sp.artist(artist_id)
+        genres = artist_info['genres']
         features = sp.audio_features(track_id)[0]
         track_info = {
             'name': current_track['item']['name'],
             'artist': current_track['item']['artists'][0]['name'],
             'album': current_track['item']['album']['name'],
+            'genre': genres,
             'bpm': features['tempo'],
             'key': features['key'],
             'mode': features['mode'],
-            'duration_ms': features['duration_ms']
+            'duration_ms': features['duration_ms'],
+            'track_id': track_id,
+            'album_image_url': current_track['item']['album']['images'][0]['url']
         }
         logging.debug(f"Track info: {track_info}")
         return jsonify(track_info)
     except Exception as e:
         logging.error(f"Error fetching currently playing track: {e}")
         return jsonify({'error': 'Failed to fetch currently playing track'})
+
+@app.route('/add-to-playlist', methods=['POST'])
+def add_to_playlist():
+    try:
+        token_info = get_token()
+        sp = Spotify(auth=token_info['access_token'])
+        data = request.json
+        genre = data['genre']
+        track_id = data['track_id']
+        
+        user_id = sp.current_user()['id']
+        playlists = sp.user_playlists(user_id)
+        playlist_id = None
+        for playlist in playlists['items']:
+            if playlist['name'].lower() == genre.lower():
+                playlist_id = playlist['id']
+                break
+        if playlist_id is None:
+            playlist = sp.user_playlist_create(user_id, genre, public=False)
+            playlist_id = playlist['id']
+        
+        sp.user_playlist_add_tracks(user_id, playlist_id, [track_id])
+        return jsonify({'success': True})
+    except Exception as e:
+        logging.error(f"Error adding track to playlist: {e}")
+        return jsonify({'error': 'Failed to add track to playlist'})
 
 def get_token():
     token_info = session.get("token_info", None)

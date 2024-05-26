@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Currently Playing</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+        }
+
+        .track-info {
+            margin: 20px;
+        }
+
+        .hidden {
+            display: none;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px;
+        }
+
+        img {
+            max-width: 300px;
+            margin: 20px 0;
+        }
+
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background-color: #333;
+            color: #fff;
+            padding: 10px;
+            border-radius: 5px;
+            opacity: 0;
+            transition: opacity 0.5s ease-in-out;
+        }
+
+        .notification.show {
+            opacity: 1;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="track-info">
+        <h2>Currently Playing</h2>
+        <img id="album-image" src="" alt="Album cover" class="hidden">
+        <p id="track-name">Name: </p>
+        <p id="track-artist">Artist: </p>
+        <p id="track-album">Album: </p>
+        <p id="track-genre">Genre: </p>
+        <p id="track-bpm">BPM: </p>
+        <p id="track-key">Key: </p>
+        <p id="track-mode">Mode: </p>
+        <div id="genre-buttons"></div>
+        <button id="login-button" class="hidden" onclick="window.location.href='/login'">Login to Spotify</button>
+    </div>
+    <div id="notification" class="notification"></div>
+
+    <script>
+        async function fetchCurrentlyPlaying() {
+            const response = await fetch('/currently-playing');
+            const data = await response.json();
+            const genreButtons = document.getElementById('genre-buttons');
+            genreButtons.innerHTML = '';
+            if (data.error) {
+                document.getElementById('track-name').innerText = data.error;
+                document.getElementById('track-artist').innerText = '';
+                document.getElementById('track-album').innerText = '';
+                document.getElementById('track-genre').innerText = '';
+                document.getElementById('track-bpm').innerText = '';
+                document.getElementById('track-key').innerText = '';
+                document.getElementById('track-mode').innerText = '';
+                document.getElementById('album-image').classList.add('hidden');
+                document.getElementById('login-button').classList.remove('hidden');
+            } else {
+                document.getElementById('track-name').innerText = 'Name: ' + data.name;
+                document.getElementById('track-artist').innerText = 'Artist: ' + data.artist;
+                document.getElementById('track-album').innerText = 'Album: ' + data.album;
+                document.getElementById('track-genre').innerText = 'Genre: ' + data.genre.join(', ');
+                document.getElementById('track-bpm').innerText = 'BPM: ' + data.bpm;
+                document.getElementById('track-key').innerText = 'Key: ' + data.key;
+                document.getElementById('track-mode').innerText = 'Mode: ' + data.mode;
+                document.getElementById('album-image').src = data.album_image_url;
+                document.getElementById('album-image').classList.remove('hidden');
+                document.getElementById('login-button').classList.add('hidden');
+
+                data.genre.forEach(genre => {
+                    const button = document.createElement('button');
+                    button.innerText = `Add to ${genre} playlist`;
+                    button.onclick = () => addToPlaylist(genre, data.track_id);
+                    genreButtons.appendChild(button);
+                });
+            }
+        }
+
+        async function addToPlaylist(genre, trackId) {
+            const response = await fetch('/add-to-playlist', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ genre: genre, track_id: trackId })
+            });
+            const data = await response.json();
+            if (data.success) {
+                showNotification(`Track added to ${genre} playlist`);
+            } else {
+                showNotification('Failed to add track to playlist');
+            }
+        }
+
+        function showNotification(message) {
+            const notification = document.getElementById('notification');
+            notification.innerText = message;
+            notification.classList.add('show');
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 3000); // Hide after 3 seconds
+        }
+
+        fetchCurrentlyPlaying();
+        setInterval(fetchCurrentlyPlaying, 5000); // Update every 5 seconds
+    </script>
+</body>
+
+</html>
