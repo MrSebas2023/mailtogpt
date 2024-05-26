@@ -62,6 +62,7 @@
         <button id="login-button" class="hidden" onclick="window.location.href='/login'">Login to Spotify</button>
     </div>
     <div id="notification" class="notification"></div>
+    <p id="lexicon-status">Lexicon API Status: Not Checked</p>
 
     <script>
         async function fetchCurrentlyPlaying() {
@@ -94,17 +95,17 @@
                 data.genre.forEach(genre => {
                     const button = document.createElement('button');
                     button.innerText = `Add to ${genre} playlist`;
-                    button.onclick = () => addToPlaylist(genre, data.track_id);
+                    button.onclick = () => addToPlaylist(genre, data.id);
                     genreButtons.appendChild(button);
                 });
             }
         }
 
         async function addToPlaylist(genre, trackId) {
-            const response = await fetch('/add-to-playlist', {
+            const response = await fetch(`/add_to_playlist/${genre}`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ genre: genre, track_id: trackId })
+                body: JSON.stringify({ track_id: trackId })
             });
             const data = await response.json();
             if (data.success) {
@@ -123,7 +124,14 @@
             }, 3000); // Hide after 3 seconds
         }
 
+        async function checkLexiconStatus() {
+            const response = await fetch('/lexicon-status');
+            const data = await response.json();
+            document.getElementById('lexicon-status').innerText = `Lexicon API Status: ${data.lexicon_status ? 'Connected' : 'Not Connected'}`;
+        }
+
         fetchCurrentlyPlaying();
+        checkLexiconStatus();
         setInterval(fetchCurrentlyPlaying, 5000); // Update every 5 seconds
     </script>
 </body>
