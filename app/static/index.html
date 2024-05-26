@@ -66,10 +66,9 @@
                     button.onclick = () => addToPlaylist(genre, data.id, button);
                     genreButtons.appendChild(button);
                 });
-            }
 
-            // Fetch history
-            fetchHistory();
+                addToHistory(data);
+            }
         }
 
         function addToHistory(track) {
