@@ -62,7 +62,7 @@
         <button id="login-button" class="hidden" onclick="window.location.href='/login'">Login to Spotify</button>
     </div>
     <div id="notification" class="notification"></div>
-    <p id="lexicon-status">Lexicon API Status: Not Checked</p>
+    <!-- <p id="lexicon-status">Lexicon API Status: Not Checked</p> -->
 
     <script>
         async function fetchCurrentlyPlaying() {
@@ -124,14 +124,14 @@
             }, 3000); // Hide after 3 seconds
         }
 
-        async function checkLexiconStatus() {
+        /*async function checkLexiconStatus() {
             const response = await fetch('/lexicon-status');
             const data = await response.json();
             document.getElementById('lexicon-status').innerText = `Lexicon API Status: ${data.lexicon_status ? 'Connected' : 'Not Connected'}`;
-        }
+        }*/
 
         fetchCurrentlyPlaying();
-        checkLexiconStatus();
+        // checkLexiconStatus();
         setInterval(fetchCurrentlyPlaying, 5000); // Update every 5 seconds
     </script>
 </body>

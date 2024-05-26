@@ -44,23 +44,23 @@ def get_token():
         session['token_info'] = token_info
     return token_info
 
-def check_lexicon_api():
-    lexicon_url = "http://192.168.2.16:48624/v1/tracks"
-    try:
-        response = requests.get(lexicon_url, timeout=5)
-        response.raise_for_status()
-        return True
-    except requests.RequestException:
-        return False
+# def check_lexicon_api():
+#     lexicon_url = "http://192.168.2.16:48624/v1/tracks"
+#     try:
+#         response = requests.get(lexicon_url, timeout=5)
+#         response.raise_for_status()
+#         return True
+#     except requests.RequestException:
+#         return False
 
 @app.route('/')
 def index():
     return send_from_directory('static', 'index.html')
 
-@app.route('/lexicon-status')
-def lexicon_status():
-    status = check_lexicon_api()
-    return jsonify({'lexicon_status': status})
+# @app.route('/lexicon-status')
+# def lexicon_status():
+#     status = check_lexicon_api()
+#     return jsonify({'lexicon_status': status})
 
 @app.route('/currently-playing', methods=['GET'])
 def currently_playing():
